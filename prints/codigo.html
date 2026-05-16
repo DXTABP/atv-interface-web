@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Print do Codigo - Biblioteca Cesumar</title>
+    <style>
+        body {
+            margin: 0;
+            background: #f4f7f6;
+            color: #1f2a2e;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        header {
+            background: #13795b;
+            color: #ffffff;
+            padding: 24px 32px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 0;
+        }
+
+        main {
+            display: grid;
+            gap: 20px;
+            padding: 24px 32px;
+        }
+
+        section {
+            background: #ffffff;
+            border: 1px solid #d8e0dd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        h2 {
+            background: #edf3f1;
+            color: #334349;
+            font-size: 18px;
+            margin: 0;
+            padding: 12px 16px;
+        }
+
+        pre {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 15px;
+            line-height: 1.45;
+            margin: 0;
+            overflow: auto;
+            padding: 16px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Sistema Web - Biblioteca Universidade Cesumar</h1>
+    <p>Trechos principais do codigo: MVC com Servlet, JSP e JSF.</p>
+</header>
+
+<main>
+    <section>
+        <h2>Controller - LivroServlet.java</h2>
+        <pre>package br.edu.unicesumar.biblioteca.controller;
+
+@WebServlet(name = "LivroServlet", urlPatterns = {"/livros"})
+public class LivroServlet extends HttpServlet {
+    private final BibliotecaRepository repository = BibliotecaRepository.getInstance();
+
+    // Requisicoes GET exibem a tela com o formulario e a lista de livros.
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        request.setAttribute("livros", repository.listar());
+        request.setAttribute("anoAtual", Year.now().getValue());
+        request.getRequestDispatcher("/WEB-INF/view/livros.jsp").forward(request, response);
+    }
+
+    // Requisicoes POST tratam cadastro e exclusao enviados pelos formularios.
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        String acao = request.getParameter("acao");
+
+        try {
+            if ("excluir".equals(acao)) {
+                excluir(request);
+                request.getSession().setAttribute("mensagem", "Livro excluido com sucesso.");
+            } else {
+                cadastrar(request);
+                request.getSession().setAttribute("mensagem", "Livro cadastrado com sucesso.");
+            }
+        } catch (ValidacaoException ex) {
+            request.getSession().setAttribute("erro", ex.getMessage());
+        }
+
+        response.sendRedirect(request.getContextPath() + "/livros");
+    }
+}</pre>
+    </section>
+
+    <section>
+        <h2>Model/Repository - BibliotecaRepository.java</h2>
+        <pre>public class BibliotecaRepository {
+    // Singleton: garante que Servlet e JSF acessem a mesma lista de livros.
+    private static final BibliotecaRepository INSTANCE = new BibliotecaRepository();
+
+    private final AtomicLong sequencia = new AtomicLong(1);
+    private final List&lt;Livro&gt; livros = new CopyOnWriteArrayList&lt;&gt;();
+
+    public Livro cadastrar(String titulo, String autor, String ano, String isbn)
+            throws ValidacaoException {
+        validarTexto(titulo, "Titulo");
+        validarTexto(autor, "Autor");
+        validarTexto(ano, "Ano de publicacao");
+        validarTexto(isbn, "ISBN");
+
+        int anoPublicacao = converterAno(ano);
+        String isbnNormalizado = normalizarIsbn(isbn);
+
+        if (!isbnValido(isbnNormalizado)) {
+            throw new ValidacaoException("ISBN deve conter 10 ou 13 digitos.");
+        }
+
+        Livro livro = new Livro(
+                sequencia.getAndIncrement(),
+                titulo.trim(),
+                autor.trim(),
+                anoPublicacao,
+                isbnNormalizado
+        );
+        livros.add(livro);
+        return livro;
+    }
+}</pre>
+    </section>
+
+    <section>
+        <h2>View JSP - livros.jsp</h2>
+        <pre>&lt;!-- Formulario de cadastro enviado via POST para o LivroServlet. --&gt;
+&lt;form method="post" action="${pageContext.request.contextPath}/livros" novalidate&gt;
+    &lt;label&gt;
+        Titulo
+        &lt;input type="text" name="titulo" maxlength="120" required&gt;
+    &lt;/label&gt;
+    &lt;label&gt;
+        Autor
+        &lt;input type="text" name="autor" maxlength="100" required&gt;
+    &lt;/label&gt;
+    &lt;label&gt;
+        Ano de publicacao
+        &lt;input type="number" name="anoPublicacao" min="1450" max="${anoAtual}" required&gt;
+    &lt;/label&gt;
+    &lt;label&gt;
+        ISBN
+        &lt;input type="text" name="isbn" maxlength="17" required&gt;
+    &lt;/label&gt;
+    &lt;button type="submit"&gt;Cadastrar&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;c:forEach var="livro" items="${livros}"&gt;
+    &lt;tr&gt;
+        &lt;td&gt;${livro.id}&lt;/td&gt;
+        &lt;td&gt;${livro.titulo}&lt;/td&gt;
+        &lt;td&gt;${livro.autor}&lt;/td&gt;
+        &lt;td&gt;${livro.anoPublicacao}&lt;/td&gt;
+        &lt;td&gt;${livro.isbn}&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/c:forEach&gt;</pre>
+    </section>
+
+    <section>
+        <h2>View JSF - acervo.xhtml</h2>
+        <pre>&lt;!-- Tabela JSF que percorre e exibe os livros cadastrados. --&gt;
+&lt;h:dataTable value="#{livroBean.livros}" var="livro"
+             rendered="#{not empty livroBean.livros}"
+             styleClass="tabela-jsf"&gt;
+    &lt;h:column&gt;
+        &lt;f:facet name="header"&gt;Titulo&lt;/f:facet&gt;
+        #{livro.titulo}
+    &lt;/h:column&gt;
+    &lt;h:column&gt;
+        &lt;f:facet name="header"&gt;Autor&lt;/f:facet&gt;
+        #{livro.autor}
+    &lt;/h:column&gt;
+    &lt;h:column&gt;
+        &lt;f:facet name="header"&gt;ISBN&lt;/f:facet&gt;
+        #{livro.isbn}
+    &lt;/h:column&gt;
+&lt;/h:dataTable&gt;</pre>
+    </section>
+</main>
+</body>
+</html>

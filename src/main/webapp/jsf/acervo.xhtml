@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!-- Pagina JSF usada para cumprir o requisito de interface com JSF. -->
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<h:head>
+    <title>Consulta JSF - Biblioteca Cesumar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <h:outputStylesheet library="css" name="estilos.css"/>
+</h:head>
+<h:body>
+    <!-- Cabecalho da consulta JSF com link de retorno para a tela JSP/Servlet. -->
+    <header class="topo">
+        <div>
+            <span class="marca">Universidade Cesumar</span>
+            <h1>Consulta do Acervo</h1>
+        </div>
+        <h:outputLink value="#{facesContext.externalContext.requestContextPath}/livros" styleClass="link-jsf">
+            Voltar ao cadastro
+        </h:outputLink>
+    </header>
+
+    <main class="conteudo">
+        <section class="painel">
+            <!-- O ManagedBean livroBean fornece a lista compartilhada de livros. -->
+            <div class="cabecalho-lista">
+                <h2>Livros cadastrados via interface JSF</h2>
+                <span>#{livroBean.livros.size()} item(ns)</span>
+            </div>
+
+            <!-- Mensagem exibida quando o acervo ainda esta vazio. -->
+            <h:panelGroup rendered="#{empty livroBean.livros}">
+                <p class="vazio">Nenhum livro cadastrado até o momento.</p>
+            </h:panelGroup>
+
+            <!-- Tabela JSF que percorre e exibe os livros cadastrados. -->
+            <h:dataTable value="#{livroBean.livros}" var="livro"
+                         rendered="#{not empty livroBean.livros}"
+                         styleClass="tabela-jsf"
+                         headerClass="cabecalho-tabela"
+                         rowClasses="linha-tabela">
+                <h:column>
+                    <f:facet name="header">ID</f:facet>
+                    #{livro.id}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Título</f:facet>
+                    #{livro.titulo}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Autor</f:facet>
+                    #{livro.autor}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Ano</f:facet>
+                    #{livro.anoPublicacao}
+                </h:column>
+                <h:column>
+                    <f:facet name="header">ISBN</f:facet>
+                    #{livro.isbn}
+                </h:column>
+            </h:dataTable>
+        </section>
+    </main>
+</h:body>
+</html>
